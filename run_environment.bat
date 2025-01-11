@@ -3,15 +3,31 @@ setlocal enabledelayedexpansion
 
 :: Check if parameters are provided
 if "%~1"=="" (
-    echo No environment provided.
-    exit /b
-)
-if "%~2"=="" (
     echo No port provided.
     exit /b
 )
+if "%~2"=="" (
+    echo No root directory provided.
+    exit /b
+)
 if "%~3"=="" (
-    echo No directory provided.
+    echo No yaml file name provided.
+    exit /b
+)
+if "%~4"=="" (
+    echo No config dirpath provided.
+    exit /b
+)
+if "%~5"=="" (
+    echo No env filename provided.
+    exit /b
+)
+if "%~6"=="" (
+    echo No keys dirpath provided.
+    exit /b
+)
+if "%~7"=="" (
+    echo No keys filename provided.
     exit /b
 )
 
@@ -27,15 +43,24 @@ if "%MINICONDA_HOME%"=="" (
 )
 
 :: Environment and Port
-set "CHATZILLA_YAML_FILE=%~1"
-set "CHATZILLA_PORT_NUMBER=%~2"
-set "CHATZILLA_ROOT_DIRECTORY=%~3"
+set "CHATZILLA_PORT_NUMBER=%~1"
+set "CHATZILLA_ROOT_DIRECTORY=%~2"
+set "CHATZILLA_YAML_FILE=%~3"
+set "CHATZILLA_CONFIG_DIRPATH=%~4"
+set "CHATZILLA_ENV_FILENAME=%~5"
+set "CHATZILLA_KEYS_ENV_DIRPATH=%~6"
+set "CHATZILLA_KEYS_ENV_FILENAME=%~7"
+
 
 :: Debugging - Print the variables
 echo MINICONDA_HOME=!MINICONDA_HOME!
 echo CHATZILLA_YAML_FILE=!CHATZILLA_YAML_FILE!
 echo CHATZILLA_PORT_NUMBER=!CHATZILLA_PORT_NUMBER!
 echo CHATZILLA_ROOT_DIRECTORY=!CHATZILLA_ROOT_DIRECTORY!
+echo CHATZILLA_CONFIG_DIRPATH=!CHATZILLA_CONFIG_DIRPATH!
+echo CHATZILLA_ENV_FILENAME=!CHATZILLA_ENV_FILENAME!
+echo CHATZILLA_KEYS_ENV_DIRPATH=!CHATZILLA_KEYS_ENV_DIRPATH!
+echo CHATZILLA_KEYS_ENV_FILENAME=!CHATZILLA_KEYS_ENV_FILENAME!
 
 :: Switch directory 
 cd "!CHATZILLA_ROOT_DIRECTORY!" || (

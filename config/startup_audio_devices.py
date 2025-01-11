@@ -16,7 +16,7 @@ chatzilla_device_hostapi_name = "Windows WASAPI"
 
 logger = create_logger(
     debug_level='INFO', 
-    logger_name="startup_audio"
+    logger_name="logger_startup_audio"
 )
 
 def get_wasapi_microphones(output_filepath=None):

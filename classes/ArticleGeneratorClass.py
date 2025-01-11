@@ -43,7 +43,7 @@ class ArticleGenerator:
 
     def fetch_random_article_content(self, article_char_trunc=1200):
         found_article = False
-        disallowed_terms_filepath = '.\data\rules\disallowed_terms.json'
+        disallowed_terms_filepath = r'.\data\rules\disallowed_terms.json'
         disallowed_terms = utils.load_json(path_or_dir=disallowed_terms_filepath)
         list_of_disallowed_terms = disallowed_terms['disallowed_terms']
         

@@ -13,7 +13,7 @@ runtime_logger_level = 'DEBUG'
 class BotEars:
     def __init__(
         self,
-        config,
+        audio_filepath,
         device_name,
         buffer_length_seconds,
         hostapi_name="Windows WASAPI",
@@ -37,22 +37,24 @@ class BotEars:
             mode="w",
             stream_logs=True
         )
-        self.config = config
 
-        # Create output directory if it doesn't exist
-        if not os.path.exists(self.config.botears_audio_path):
-            os.makedirs(self.config.botears_audio_path)
+        botears_audio_dirpath = os.path.dirname(audio_filepath)
+        botears_audio_filename = os.path.basename(audio_filepath)
 
-        # Find the host API index
-        hostapis = sd.query_hostapis()
-        hostapi_index = next(
+        if not os.path.exists(botears_audio_dirpath):
+            os.makedirs(botears_audio_dirpath)
+
+        try:
+            hostapis = sd.query_hostapis()
+            hostapi_index = next(
             (index for index, api in enumerate(hostapis) if api["name"] == hostapi_name),
             None,
-        )
+            )
+        except Exception as e:
+            raise RuntimeError(f"Error querying host APIs: {e}")
         if hostapi_index is None:
             raise ValueError(f"Host API '{hostapi_name}' not available.")
 
-        # Detect the device index from the name and host API
         try:
             device_index = self.find_device_index(device_name, hostapi_index)
         except ValueError as e:
@@ -76,16 +78,8 @@ class BotEars:
         self.stream_channels = device_info["max_input_channels"]
         self.logger.debug(f"Attempting to open stream with {self.stream_channels} channels.")
 
-        self.botears_audio_filename = self.config.botears_audio_filename
-        self.buffer_length_seconds = buffer_length_seconds
-
-        # We always downmix to mono, but we have to open the stream with
-        # whatever channel count the device supports. We'll keep a fallback
-        # logic if it fails.
         self.stream = None
-
-        # Attempt to open with self.stream_channels; fallback to lower channel counts if needed
-        fallback_channels = [device_info["max_input_channels"], 2, 1]
+        fallback_channels = [1] #[device_info["max_input_channels"], 2, 1] (20250105 - doesn't seem to work using multiple channels)
         opened_ok = False
         last_error = None
 
@@ -117,11 +111,14 @@ class BotEars:
         Attempt to open an InputStream with the specified number of channels.
         If it fails, raise an exception so we can fallback.
         """
+        sd.Stream()
+        wasapi_info = sd.WasapiSettings(exclusive=False)
         self.stream = sd.InputStream(
             device=device_index,
             samplerate=self.samplerate,
             channels=channels,
             callback=self._audio_callback,
+            extra_settings=wasapi_info
         )
         # We won't call `start()` here; that happens below in start_botears_audio_stream
 
@@ -132,8 +129,7 @@ class BotEars:
         if status:
             self.logger.warning(f"Audio callback status: {status}")
 
-        # indata shape: (frames, self.stream_channels)
-        # Downmix to mono
+        # Reduce the data to mono by averaging across channels
         mono_data = np.mean(indata, axis=1)  # shape: (frames,)
         self.buffer.extend(mono_data)
 
@@ -222,23 +218,27 @@ if __name__ == "__main__":
     import asyncio
 
     async def run_test():
-        # You might need to change this import depending on your directory structure
         from classes.ConfigManagerClass import ConfigManager
-        yaml_filepath = r'C:\_repos\chatzilla_ai_dev\chatzilla_ai\config\bot_user_configs\chatzilla_ai_ehitch.yaml'
-        
-        # Initialize your config
-        ConfigManager.initialize(yaml_filepath=yaml_filepath)
+
+        os.environ['CHATZILLA_CONFIG_DIRPATH'] = r'C:\_repos\chatzilla_ai\config'
+        os.environ['CHATZILLA_YAML_FILE'] = 'chatzilla_ai_ehitch.yaml'
+        os.environ['CHATZILLA_ENV_FILENAME'] = '.env'
+        os.environ['CHATZILLA_KEYS_ENV_DIRPATH'] = 'keys'
+        os.environ['CHATZILLA_KEYS_ENV_FILENAME'] = '.env.keys'
+        os.environ['CHATZILLA_YAML_PATH'] = r'.\config\bot_user_configs' '\\' + os.getenv('CHATZILLA_YAML_FILE')        
+        print(f"yaml_filepath_type: {type(os.environ['CHATZILLA_YAML_PATH'])}")
+
+        ConfigManager.initialize(yaml_filepath=os.environ['CHATZILLA_YAML_PATH'])
         config = ConfigManager.get_instance()
 
-        # Choose your microphone (same as before)
-        device_name = "Microphone Array (Realtek(R) Audio)"
+        device_name = "Microphone (Yeti Classic)"
+        botears_audio_filepath = os.path.join(config.botears_audio_path, config.botears_audio_filename)
 
-        # Create and start BotEars
         try:
             ears = BotEars(
-                config=config,
+                audio_filepath=botears_audio_filepath,
                 device_name=device_name,
-                buffer_length_seconds=5  # buffer can store 5 seconds of data
+                buffer_length_seconds=5
             )
         except Exception as e:
             print(f"Error creating BotEars instance: {e}")

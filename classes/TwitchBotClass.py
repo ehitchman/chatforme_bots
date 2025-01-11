@@ -108,8 +108,9 @@ class Bot(twitch_commands.Bot):
         # instantiate the AudioService and BotEars
         self.audio_service = AudioService(volume=self.config.tts_volume)
         device_name = self.config.chatzilla_mic_device_name
+        botears_audio_filepath = os.path.join(config.botears_audio_path, config.botears_audio_filename)
         self.bot_ears = BotEars(
-            config=self.config,
+            audio_filepath=botears_audio_filepath,
             device_name=device_name,
             buffer_length_seconds=self.config.botears_buffer_length_seconds
             )
@@ -347,12 +348,19 @@ class Bot(twitch_commands.Bot):
             )
         
         # start newusers loop
-        self.logger.debug(f"Starting newusers service")
-        self.loop.create_task(self._send_message_to_new_users_task())
+        if self.config.twitch_bot_gpt_new_users_service is True:
+            self.logger.debug(f"Starting newusers service")
+            self.loop.create_task(self._send_message_to_new_users_task())
+        else:
+            self.logger.debug(f"New Users service is disabled")
 
         # send hello world message
-        await self._send_hello_world_message()
-        
+        if self.config.twitch_bot_gpt_hello_world == True:
+            self.logger.debug(f"Sending hello world message")
+            await self._send_hello_world_message()
+        else:
+            self.logger.debug(f"Hello World message is disabled")
+
     async def event_message(self, message):
 
         thread_name = 'chatformemsgs'

@@ -20,7 +20,7 @@ class NewUsersService:
         self.users_sent_messages_list = []
         
         # grab the known bots from the json file
-        self.known_bots = utils.load_json(path_or_dir='.\data\ruless\known_bots.json')
+        self.known_bots = utils.load_json(path_or_dir=r'.\data\rules\known_bots.json')
         self.known_bots_list = self.known_bots['known_bots']
 
     async def get_users_not_yet_sent_message(

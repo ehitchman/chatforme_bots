@@ -12,9 +12,9 @@ from classes.ConfigManagerClass import ConfigManager
 
 from my_modules import utils
 
-gpt_base_debug_level = 'DEBUG'
+gpt_base_debug_level = 'INFO'
 gpt_thread_mgr_debug_level = 'INFO'
-gpt_assistant_mgr_debug_level = 'INFO'
+gpt_assistant_mgr_debug_level = 'DEBUG'
 gpt_response_mgr_debug_level = 'INFO'
 
 class GPTBaseClass:
@@ -86,29 +86,33 @@ class GPTFunctionCallManager(GPTBaseClass):
         """
         Executes the function call workflow for the specified thread.
 
-        Args:
-            thread_name (str): The name of the thread containing the chat history.
-
         Returns:
             str: The final response from the assistant and the output data.
         """
 
+        self.logger.info('Threads and Assistants:')
+        self.logger.info(f"...Threads: {self.gpt_thread_manager.threads}")
+        self.logger.info(f"...Assistants: {self.gpt_assistant_manager.assistants}")
+
         # Retrieve the thread/assistant ID by name
         try:
-            self.logger.info(f"Executing function call for thread '{thread_name}' with assistant '{assistant_name}'")
-            thread_id = self.gpt_thread_manager.threads[thread_name]['id']
             assistant_entry = self.gpt_assistant_manager.assistants.get(assistant_name)
             assistant_id = assistant_entry['id']
         except KeyError:
-            self.logger.error("...Thread or assistant not found.")
-            raise ValueError("...Thread or assistant not found.")
+            self.logger.error(f"...Assistant or id for '{assistant_name}' not found", exc_info=True)
+
+        try:
+            self.logger.info(f"Executing function call for thread '{thread_name}' with assistant '{assistant_name}'")
+            thread_id = self.gpt_thread_manager.threads[thread_name]['id']
+        except KeyError:
+            self.logger.error("...thread name or id not found", exc_info=True)
         
         if not assistant_entry:
             self.logger.error(f"...Assistant '{assistant_name}' not found.")
-            raise ValueError(f"...Assistant '{assistant_name}' not found.")
         if not thread_id:
             self.logger.error(f"...Thread '{thread_name}' not found.")
-            raise ValueError(f"...Thread '{thread_name}' not found.")
+        if not assistant_id:
+            self.logger.error(f"...Assistant ID not found for '{assistant_name}'.")
 
         async with self.thread_run_locks[thread_name]:
             try:
@@ -452,10 +456,10 @@ class GPTAssistantManager(GPTBaseClass):
         """
         self.logger.info('Creating GPT Assistants with functions')
 
-        for assistant_entry in assistants_with_functions:
-            name = assistant_entry["name"]
-            instructions = assistant_entry["instructions"]
-            json_schema = assistant_entry["json_schema"]
+        for assistant_details in assistants_with_functions:
+            name = assistant_details["name"]
+            instructions = assistant_details["instructions"]
+            json_schema = assistant_details["json_schema"]
             self.logger.debug(f'Creating assistant with function: {name}')
             self.logger.debug(f'Instructions: {instructions}')
             self.logger.debug(f"Json Schema Type: {type(json_schema)}")
@@ -756,9 +760,19 @@ class GPTResponseManager(GPTBaseClass):
 
 async def main():
     import openai
+    import os
 
-    # Load the configuration manager
-    ConfigManager.initialize(yaml_filepath=r'C:\_repos\chatzilla_ai\config\bot_user_configs\chatzilla_ai_ehitch.yaml')
+    os.environ['CHATZILLA_CONFIG_DIRPATH'] = r'C:\_repos\chatzilla_ai\config'
+    os.environ['CHATZILLA_YAML_FILE'] = 'chatzilla_ai_ehitch.yaml'
+    os.environ['CHATZILLA_ENV_FILENAME'] = '.env'
+    os.environ['CHATZILLA_KEYS_ENV_DIRPATH'] = 'keys'
+    os.environ['CHATZILLA_KEYS_ENV_FILENAME'] = '.env.keys'
+    os.environ['CHATZILLA_YAML_PATH'] = r'.\config\bot_user_configs' '\\' + os.getenv('CHATZILLA_YAML_FILE')
+    
+    #yaml_filepath = r'C:\_repos\chatzilla_ai\config\bot_user_configs\chatzilla_ai_ehitch.yaml'
+    print(f"yaml_filepath_type: {type(os.environ['CHATZILLA_YAML_PATH'])}")
+
+    ConfigManager.initialize(yaml_filepath=os.environ['CHATZILLA_YAML_PATH'])
     config = ConfigManager.get_instance()
 
     # openai client
@@ -808,16 +822,21 @@ async def main():
     # print(f"Assistant's Response: {response}")
 
     ######################################
-    # TEST 3: Now try to create_assistants
+    # TEST 3: Now try to create_assistants and threads
     assistant_manager.create_assistants(config.gpt_assistants_config)
+    assistant_manager.create_assistants_with_functions(config.gpt_assistants_with_functions_config)
+
+    thread_manager.create_threads(config.gpt_thread_names)
 
     ######################################
     # TEST 4 (requires TEST#3): Try to use function call manager to execute a function call
-    thread_name = "conversationdirector"
+    thread_name = "chatformemsgs"
     assistant_name = "conversationdirector"
+    conversation_director_function_schema = config.function_schemas['conversationdirector']
     output_data, response = await function_call_manager.execute_function_call(
         thread_name, 
         assistant_name, 
+        function_schema=conversation_director_function_schema,
         get_response=False
         )
     print(f"output_data: {output_data}")

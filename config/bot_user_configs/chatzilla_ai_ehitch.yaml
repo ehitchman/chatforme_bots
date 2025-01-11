@@ -1,25 +1,14 @@
 #########################
 #########################
 
-#CONFIG (cloud)
-app_config_dirpath: '.\config'
-env_filename: '.env'
-keys_env_dirpath: '.\keys'
-keys_env_filename: '.env.keys'
-
-google_service_account_credentials_file: 'eh-talkzilla-ai-1bcb1963d5b4.json'
-
-
-#CONFIG (bigquery)
-talkzillaai_userdata_table_id: 'eh-talkzilla-ai.TalkzillaAI_UserData.users'
-talkzillaai_usertransactions_table_id: 'eh-talkzilla-ai.TalkzillaAI_UserData.user_interactions'
-
 # File Paths
 spellcheck_commands_filename: '.\data\rules\command_spellcheck_terms.json'
 
 #Flask App
 twitch-app:
   twitch_bot_gpt_hello_world: True
+  twitch_bot_gpt_new_users_service: False
+  twitch_bot_gpt_returning_users_faiss_service: True
   twitch_bot_username: 'chatzilla_ai'
   twitch_bot_display_name: 'chatzilla_ai'
   twitch_bot_operatorname: 'ehitch'
@@ -537,7 +526,6 @@ ouat-writing-parameters:
 # NewUsersService vars
 newusers_sleep_time: 5
 #returningusers_sleep_time: 15
-flag_returning_users_service: False
 newusers_faiss_default_query: "{random_user_name} discussed some recent projects/topics/concepts or asked for a reminder. They might ahve also had some hot takes on some things."
 newusers_msg_prompt: "Say hi and tag @{random_new_user}, welcoming them to the chat on behalf 
   of ehitch. Keep the message to {wordcount_medium} words max. Since it's their first time 
